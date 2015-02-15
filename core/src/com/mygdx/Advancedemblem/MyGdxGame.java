@@ -46,7 +46,10 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
     SpriteBatch batch;
     String tileType;
     Pathfinder pathfinder;
+    // UI
     Sprite blueSquare;
+    Sprite cursor;
+    Sprite panel;
 
     Stage currentStage;
     Unit selectedActor;
@@ -78,6 +81,10 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         Texture texture = new Texture(Gdx.files.internal("pik32.png"));
         blueSquare = new Sprite(new Texture(Gdx.files.internal("blueSquare.png")));
         blueSquare.setColor(1, 1, 1, 0.5f);
+
+        // Setup UI
+        cursor = new Sprite(new Texture(Gdx.files.internal("cursor.png")));
+        panel = new Sprite(new Texture(Gdx.files.internal("panel2.png")));
 
         // Setup Pathfinding
         pathfinder = new Pathfinder(tiledMap);
@@ -118,8 +125,9 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         font.dispose();
         // Dispose all Unit sounds
         for (int i = 0; i < currentStage.getActors().size; i++) {
-            for (int x = 0; x < ((Unit)currentStage.getActors().get(i)).FX.length; x++)
-                ((Unit)currentStage.getActors().get(i)).FX[x].dispose();
+            for (int x = 0; x < ((Unit) currentStage.getActors().get(i)).FX.length; x++) {
+                ((Unit) currentStage.getActors().get(i)).FX[x].dispose();
+            }
         }
         currentStage.dispose();
         tiledMap.dispose();
@@ -138,12 +146,25 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         currentStage.act(Gdx.graphics.getDeltaTime());
         currentStage.draw();
         batch.begin();
+        drawCursor();
         drawDebugInfo();
         if (selectedActor != null) {
             drawMovement();
+            drawInfoPane();
         }
         batch.end();
 
+    }
+    
+    public void drawInfoPane() {
+        float offsetX = camera.viewportWidth * camera.zoom;
+        float offsetY = camera.viewportHeight * camera.zoom;
+        batch.draw(panel, 
+                camera.position.x - panel.getWidth()/2 + offsetX / 2 - panel.getWidth()/2,
+                camera.position.y - offsetY / 2 + 30);
+        batch.draw(selectedActor.portrait, 
+                camera.position.x - selectedActor.portrait.getWidth()/2 + offsetX / 2 - selectedActor.portrait.getWidth()/2 - panel.getWidth() ,
+                camera.position.y - offsetY / 2 + 30);
     }
 
     public void drawMovement() {
@@ -170,6 +191,15 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
                     camera.position.y + offsetY / 2 - 15);
         }
 
+    }
+
+    public void drawCursor() {
+        Vector3 clickCoordinates = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+        Vector3 position = camera.unproject(clickCoordinates);
+        position.x = position.x - (position.x % 32);
+        position.y = position.y - (position.y % 32);
+        cursor.setPosition(position.x, position.y);
+        cursor.draw(batch);
     }
 
     @Override
@@ -206,8 +236,8 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
             Vector3 position = camera.unproject(clickCoordinates);
             Unit potentialHit = (Unit) currentStage.hit(position.x, position.y, true);
             if (potentialHit == null && selectedActor != null && !selectedActor.hasPassedTurn) {
-                position.x = (position.x - selectedActor.getWidth() / 2) - (position.x - selectedActor.getWidth() / 2) % 32;
-                position.y = (position.y - selectedActor.getHeight() / 2) - (position.y - selectedActor.getHeight() / 2) % 32;
+                position.x = (position.x) - (position.x % 32);
+                position.y = (position.y) - (position.y % 32);
                 if (canMoveHere(selectedActor, (int) position.x, (int) position.y)) {
                     selectedActor.setX(position.x);
                     selectedActor.setY(position.y);
@@ -221,6 +251,8 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
                 tileType = getCurrentTileType();
                 possibleMoves = pathfinder.getPossibleMoves(potentialHit);
                 selectedActor.playFX();
+                /*camera.position.x = position.x;
+                camera.position.y = position.y;*/
 
             }
         }
@@ -320,7 +352,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         }
         return canMove;
     }
-
+    
     public abstract class Unit extends Actor {
 
         int maxMoves = 2;
@@ -330,6 +362,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         String name = "Default";
         boolean hasPassedTurn;
         Sound[] FX;
+        Texture portrait;
 
         public Unit(float x, float y, Texture texture, String name) {
             this.setX(x);
@@ -417,6 +450,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
             this.FX = new Sound[2];
             this.FX[0] = Sounds.pikachu;
             this.FX[1] = Sounds.pikachu2;
+            this.portrait = new Texture(Gdx.files.internal("soldier/portrait.png"));
         }
 
         @Override
