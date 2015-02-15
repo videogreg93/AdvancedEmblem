@@ -50,6 +50,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
     Sprite blueSquare;
     Sprite cursor;
     Sprite panel;
+    BitmapFont panelFont;
 
     Stage currentStage;
     Unit selectedActor;
@@ -84,7 +85,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
 
         // Setup UI
         cursor = new Sprite(new Texture(Gdx.files.internal("cursor.png")));
-        panel = new Sprite(new Texture(Gdx.files.internal("panel2.png")));
+        panel = new Sprite(new Texture(Gdx.files.internal("panel3.png")));
 
         // Setup Pathfinding
         pathfinder = new Pathfinder(tiledMap);
@@ -92,6 +93,9 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         // Setup font
         font = new BitmapFont();
         font.setColor(Color.RED);
+        
+        panelFont = new BitmapFont();
+        panelFont.setColor(Color.WHITE);
 
         // Setup stage
         currentStage = new Stage(new ExtendViewport(Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
@@ -99,6 +103,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         Soldier actor = new Soldier(128, 128, texture, "George");
         myActor.setTouchable(Touchable.enabled);
         actor.setTouchable(Touchable.enabled);
+        actor.setIsAlly(false);
         currentStage.addActor(actor);
         currentStage.addActor(myActor);
         currentStage.setKeyboardFocus(myActor);
@@ -123,6 +128,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
     public void dispose() {
         batch.dispose();
         font.dispose();
+        panelFont.dispose();
         // Dispose all Unit sounds
         for (int i = 0; i < currentStage.getActors().size; i++) {
             for (int x = 0; x < ((Unit) currentStage.getActors().get(i)).FX.length; x++) {
@@ -155,16 +161,25 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         batch.end();
 
     }
-    
+
     public void drawInfoPane() {
         float offsetX = camera.viewportWidth * camera.zoom;
         float offsetY = camera.viewportHeight * camera.zoom;
-        batch.draw(panel, 
-                camera.position.x - panel.getWidth()/2 + offsetX / 2 - panel.getWidth()/2,
+        batch.draw(panel,
+                camera.position.x - panel.getWidth() / 2 + offsetX / 2 - panel.getWidth() / 2,
                 camera.position.y - offsetY / 2 + 30);
-        batch.draw(selectedActor.portrait, 
-                camera.position.x - selectedActor.portrait.getWidth()/2 + offsetX / 2 - selectedActor.portrait.getWidth()/2 - panel.getWidth() ,
+        batch.draw(selectedActor.portrait,
+                camera.position.x - selectedActor.portrait.getWidth() / 2 + offsetX / 2 - selectedActor.portrait.getWidth() / 2 - panel.getWidth(),
                 camera.position.y - offsetY / 2 + 30);
+        // draw Attack
+        panelFont.draw(batch, "10", camera.position.x + offsetX / 2 - (3 * panel.getWidth() / 4) - 2,
+                camera.position.y - offsetY / 2 + 33 + (3 * panel.getHeight()/ 4));
+        // Draw Health
+        panelFont.draw(batch, "7", camera.position.x + offsetX / 2 - (3 * panel.getWidth() / 4),
+                camera.position.y - offsetY / 2 + 33 + (panel.getHeight()/ 3));
+        // Draw Movement
+        panelFont.draw(batch, "2", camera.position.x + offsetX / 2 - (panel.getWidth() / 4),
+                camera.position.y - offsetY / 2 + 33 + (3 * panel.getHeight()/ 4) - 2);
     }
 
     public void drawMovement() {
@@ -213,6 +228,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
                 ((Unit) (allActors.get(i))).hasPassedTurn = false;
             }
         }
+
         return false;
     }
 
@@ -235,7 +251,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
             Vector3 clickCoordinates = new Vector3(screenX, screenY, 0);
             Vector3 position = camera.unproject(clickCoordinates);
             Unit potentialHit = (Unit) currentStage.hit(position.x, position.y, true);
-            if (potentialHit == null && selectedActor != null && !selectedActor.hasPassedTurn) {
+            if (potentialHit == null && selectedActor != null && !selectedActor.hasPassedTurn && selectedActor.getIsAlly()) {
                 position.x = (position.x) - (position.x % 32);
                 position.y = (position.y) - (position.y % 32);
                 if (canMoveHere(selectedActor, (int) position.x, (int) position.y)) {
@@ -252,7 +268,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
                 possibleMoves = pathfinder.getPossibleMoves(potentialHit);
                 selectedActor.playFX();
                 /*camera.position.x = position.x;
-                camera.position.y = position.y;*/
+                 camera.position.y = position.y;*/
 
             }
         }
@@ -352,25 +368,28 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         }
         return canMove;
     }
-    
+
     public abstract class Unit extends Actor {
 
         int maxMoves = 2;
-        Texture texture = new Texture("pik.png");
+        Sprite texture;
         float actorX = 0, actorY = 0;
         float newX = 0;
         String name = "Default";
         boolean hasPassedTurn;
         Sound[] FX;
         Texture portrait;
+        
+        // private
+       private boolean isAlly = true;
 
         public Unit(float x, float y, Texture texture, String name) {
             this.setX(x);
             this.setY(y);
-            this.texture = texture;
+            this.texture = new Sprite(texture);
             this.name = name;
             this.hasPassedTurn = false;
-            setBounds(x, y, this.texture.getWidth(), this.texture.getHeight());
+            setBounds(x, y, texture.getWidth(), texture.getHeight());
             addListener(new InputListener() {
 
                 @Override
@@ -439,6 +458,16 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
                 int randomNum = rand.nextInt((this.FX.length - 1) + 1) + 0;
                 FX[randomNum].play();
             }
+        }
+
+        public void setIsAlly(boolean ally) {
+            // Set correct direction
+            this.texture.flip(this.isAlly != ally, false);
+            this.isAlly = ally;
+        }
+        
+        public boolean getIsAlly() {
+            return this.isAlly;
         }
     }
 
