@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="32" height="32" tilewidth="32" tileheight="32" nextobjectid="1">
+ <tileset firstgid="1" name="tileset" tilewidth="32" tileheight="32">
+  <image source="testTile.png" width="512" height="512"/>
+  <tile id="78">
+   <properties>
+    <property name="type" value="grass"/>
+   </properties>
+  </tile>
+  <tile id="183">
+   <properties>
+    <property name="type" value="road"/>
+   </properties>
+  </tile>
+  <tile id="184">
+   <properties>
+    <property name="type" value="road"/>
+   </properties>
+  </tile>
+  <tile id="199">
+   <properties>
+    <property name="type" value="road"/>
+   </properties>
+  </tile>
+  <tile id="200">
+   <properties>
+    <property name="type" value="road"/>
+   </properties>
+  </tile>
+ </tileset>
+ <layer name="Tile Layer 1" width="32" height="32">
+  <data encoding="base64" compression="zlib">
+   eJzt1rENwDAIRFE29LpkA7JV3KC4cqTo5Gt+8Vq+aBAjIoZATpdo1h813fTp06d/WJr7Zew7d++2o09b0854f4eWG+q913mtPjjvHAAACg9usl3j
+  </data>
+ </layer>
+ <layer name="props" width="32" height="32">
+  <data encoding="base64" compression="zlib">
+   eJzt07kOglAURVFAoMeB3gF7BOzFoVfRHhD+/xPcJQUFhbmJydnJakheTsN1HKWUUsNceJjBR4DQcD/CHAsssUJsuL/GBlvskGBvuJ/igAw5ChwN908occYFV9wM9+944IkKL7wnvHNHvln+t7ob3c0/3s2vqtGgxQcdesN9pZSa2heK2g6Z
+  </data>
+ </layer>
+</map>
