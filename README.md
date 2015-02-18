@@ -3,6 +3,10 @@ Repo for Advanced Emblem
 
 Welcome to Advanced Emblem!
 
+An executable file can be find in AdvancedEmblem/desktop/build/libs
+
+YOU MUST HAVE JAVA INSTALLED FOR IT TO WORK!
+
 Controls for debug:
 
 Enter: pass turn
