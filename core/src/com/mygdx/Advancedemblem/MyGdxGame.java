@@ -42,12 +42,15 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
     TiledMap tiledMap;
     OrthographicCamera camera;
     TiledMapRenderer tiledMapRenderer;
+    int mapWidth;
+    int mapHeight;
     BitmapFont font;
     SpriteBatch batch;
     String tileType;
     Pathfinder pathfinder;
     // UI
     Sprite blueSquare;
+    Sprite redSquare;
     Sprite cursor;
     Sprite panel;
     BitmapFont panelFont;
@@ -64,9 +67,9 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         float h = Gdx.graphics.getHeight();
         camera = new OrthographicCamera();
         camera.setToOrtho(false, w, h);
-        camera.zoom = 0.4f;
-        camera.position.x = 216f;
-        camera.position.y = 385f;
+        camera.zoom = 0.5f; // 0.4
+        camera.position.x = Gdx.graphics.getWidth() / 2 * camera.zoom;
+        camera.position.y = Gdx.graphics.getHeight() / 2 * camera.zoom;
         camera.update();
     }
 
@@ -77,11 +80,17 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
 
         tiledMap = new TmxMapLoader().load("MyCrappyMap.tmx");
         tiledMapRenderer = new OrthogonalTiledMapRenderer(tiledMap);
+        mapWidth = (tiledMap.getProperties().get("width", Integer.class))
+                * (tiledMap.getProperties().get("tilewidth", Integer.class));
+        mapHeight = (tiledMap.getProperties().get("height", Integer.class))
+                * (tiledMap.getProperties().get("tileheight", Integer.class));
 
         // Setup test sprite
         Texture texture = new Texture(Gdx.files.internal("pik32.png"));
         blueSquare = new Sprite(new Texture(Gdx.files.internal("blueSquare.png")));
         blueSquare.setColor(1, 1, 1, 0.5f);
+        redSquare = new Sprite(new Texture(Gdx.files.internal("redSquare.png")));
+        redSquare.setColor(1, 1, 1, 0.5f);
 
         // Setup UI
         cursor = new Sprite(new Texture(Gdx.files.internal("cursor.png")));
@@ -93,7 +102,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         // Setup font
         font = new BitmapFont();
         font.setColor(Color.RED);
-        
+
         panelFont = new BitmapFont();
         panelFont.setColor(Color.WHITE);
 
@@ -104,6 +113,10 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         myActor.setTouchable(Touchable.enabled);
         actor.setTouchable(Touchable.enabled);
         actor.setIsAlly(false);
+        myActor.setBaseHealth(10);
+        myActor.setBaseAttack(7);
+        actor.setBaseHealth(15);
+        actor.setBaseAttack(4);
         currentStage.addActor(actor);
         currentStage.addActor(myActor);
         currentStage.setKeyboardFocus(myActor);
@@ -172,22 +185,28 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
                 camera.position.x - selectedActor.portrait.getWidth() / 2 + offsetX / 2 - selectedActor.portrait.getWidth() / 2 - panel.getWidth(),
                 camera.position.y - offsetY / 2 + 30);
         // draw Attack
-        panelFont.draw(batch, "10", camera.position.x + offsetX / 2 - (3 * panel.getWidth() / 4) - 2,
-                camera.position.y - offsetY / 2 + 33 + (3 * panel.getHeight()/ 4));
+        panelFont.draw(batch, selectedActor.getRealAttack() + "", camera.position.x + offsetX / 2 - (3 * panel.getWidth() / 4) - 2,
+                camera.position.y - offsetY / 2 + 33 + (3 * panel.getHeight() / 4));
         // Draw Health
-        panelFont.draw(batch, "7", camera.position.x + offsetX / 2 - (3 * panel.getWidth() / 4),
-                camera.position.y - offsetY / 2 + 33 + (panel.getHeight()/ 3));
+        panelFont.draw(batch, selectedActor.getBaseHealth() + "", camera.position.x + offsetX / 2 - (3 * panel.getWidth() / 4),
+                camera.position.y - offsetY / 2 + 33 + (panel.getHeight() / 3));
         // Draw Movement
-        panelFont.draw(batch, "2", camera.position.x + offsetX / 2 - (panel.getWidth() / 4),
-                camera.position.y - offsetY / 2 + 33 + (3 * panel.getHeight()/ 4) - 2);
+        panelFont.draw(batch, selectedActor.maxMoves + "", camera.position.x + offsetX / 2 - (panel.getWidth() / 4),
+                camera.position.y - offsetY / 2 + 33 + (3 * panel.getHeight() / 4) - 2);
     }
 
     public void drawMovement() {
         nbOfMOves = "" + possibleMoves.size();
+        Sprite square = new Sprite();
+        if (selectedActor.getIsAlly()) {
+            square = blueSquare;
+        } else {
+            square = redSquare;
+        }
         for (int i = 0; i < possibleMoves.size(); i++) {
             Node temp = (Node) possibleMoves.get(i);
-            blueSquare.setPosition(temp.x, temp.y);
-            blueSquare.draw(batch);
+            square.setPosition(temp.x, temp.y);
+            square.draw(batch);
         }
     }
 
@@ -323,7 +342,14 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
 
     @Override
     public boolean pan(float f, float f1, float deltaX, float deltaY) {
-        camera.translate(-deltaX, deltaY);
+        if ((2 * ((camera.position.x - deltaX) / camera.zoom) > Gdx.graphics.getWidth()) &&
+                ((camera.position.x - deltaX) )/camera.zoom + (Gdx.graphics.getWidth()/2) < mapWidth/camera.zoom) {
+            camera.translate(-deltaX, 0);
+        }
+        if (2 * ((camera.position.y + deltaY) / camera.zoom) > Gdx.graphics.getHeight() && 
+               ((camera.position.y + deltaY) )/camera.zoom + (Gdx.graphics.getHeight()/2) < mapHeight/camera.zoom ) {
+            camera.translate(0, deltaY);
+        }
         return true;
     }
 
@@ -379,9 +405,11 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
         boolean hasPassedTurn;
         Sound[] FX;
         Texture portrait;
-        
+
         // private
-       private boolean isAlly = true;
+        private boolean isAlly = true;
+        private int baseHealth = 1;
+        private int baseAttack = 1;
 
         public Unit(float x, float y, Texture texture, String name) {
             this.setX(x);
@@ -431,6 +459,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
                 }
 
             });
+
         }
 
         @Override
@@ -465,9 +494,33 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor, Ges
             this.texture.flip(this.isAlly != ally, false);
             this.isAlly = ally;
         }
-        
+
         public boolean getIsAlly() {
             return this.isAlly;
+        }
+
+        public int getBaseAttack() {
+            return this.baseAttack;
+        }
+
+        public void setBaseAttack(int attack) {
+            this.baseAttack = attack;
+        }
+        
+        public int getRealAttack() {
+            return this.baseAttack;
+        }
+        
+        public int getBaseHealth() {
+            return this.baseHealth;
+        }
+
+        public void setBaseHealth(int health) {
+            this.baseHealth = health;
+        }
+        
+        public int getRealHealth() {
+            return this.baseHealth;
         }
     }
 
